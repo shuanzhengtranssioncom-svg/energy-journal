@@ -587,7 +587,13 @@ function renderWeekView() {
   document.getElementById('footer-text').textContent = `第 ${completedCount} / 7 天`;
 
   if (DATA._pending_summary) {
-    setTimeout(() => showWeekReviewPopup(), 500);
+    html += `
+      <div class="mt-4 pt-3">
+        <button onclick="showWeekReviewPopup()" class="w-full py-3 rounded-xl text-white font-medium text-sm transition-opacity hover:opacity-90" style="background: linear-gradient(135deg, #C3A485 0%, #DB9280 100%);">
+          <i class="fa-solid fa-arrow-right mr-2"></i>进入下一周
+        </button>
+        <p class="text-xs text-premium-textMuted text-center mt-2">这一周已完整，开启新的一周</p>
+      </div>`;
   }
 }
 
@@ -857,7 +863,7 @@ async function saveToday(idx) {
         completed_days: 7
       };
       saveData(DATA);
-      setTimeout(() => showWeekReviewPopup(), 600);
+      render();
     }
   }
 }
@@ -936,7 +942,7 @@ async function saveTodayFromMonth(idx, weekIdx) {
         completed_days: 7
       };
       saveData(DATA);
-      setTimeout(() => showWeekReviewPopup(), 600);
+      render();
     }
   }
 }
@@ -1036,6 +1042,7 @@ function showFeedback(text) {
 
 function closeFeedback() {
   document.getElementById('popup-feedback').classList.add('hidden');
+  render();
 }
 
 function closeNewWeekPopup() {
@@ -1044,6 +1051,19 @@ function closeNewWeekPopup() {
 
 function startNewWeek() {
   document.getElementById('popup-new-week').classList.add('hidden');
+  const summary = DATA._pending_summary;
+  if (summary) {
+    DATA.archived_weeks.unshift(summary);
+  }
+  // Only advance to next week if the summary belongs to the current week
+  // (not when checkWeekIntegrity already advanced on Monday)
+  if (summary && summary.week_start === DATA.current_week_start) {
+    const nextMonday = new Date(DATA.current_week_start + 'T00:00:00');
+    nextMonday.setDate(nextMonday.getDate() + 7);
+    DATA.current_week_start = nextMonday.toISOString().split('T')[0];
+    DATA.entries = {};
+    DATA.week_review = null;
+  }
   delete DATA._pending_summary;
   saveData(DATA);
   render();
