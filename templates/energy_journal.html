@@ -1269,6 +1269,12 @@ function render() {
 // ═══════════════════════════════════════════════════════════════
 
 function init() {
+  if (new URLSearchParams(location.search).has('reset')) {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_V1);
+    location.replace('/energy-journal');
+    return;
+  }
   if (!isValidDateStr(DATA.current_week_start)) {
     DATA.current_week_start = getMondayStr();
     saveData(DATA);
