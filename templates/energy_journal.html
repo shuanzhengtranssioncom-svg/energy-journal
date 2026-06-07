@@ -447,6 +447,8 @@ function renderWeekView() {
     ${isThisWeek ? '<p style="font-size:12px; color:#C3A485; margin-top:2px;">📌 当前周</p>' : ''}
   </div>`;
 
+  const futureWeek = mondayStr > thisMonday;
+
   for (let i = 0; i < 7; i++) {
     const entry = DATA.entries[i] || null;
     const today = isToday(i) && isThisWeek;
@@ -588,7 +590,7 @@ function renderWeekView() {
           <span class="text-sm text-premium-textMuted">${DAY_LABELS[i]}</span>
           <span class="text-xs text-premium-textMuted">${dateStr}</span>
         </div>
-        <p class="text-xs text-premium-textMuted ml-7 mt-1">错过了，没关系</p>
+        <p class="text-xs text-premium-textMuted ml-7 mt-1">${futureWeek ? '还没发生，留点期待' : '错过了，没关系'}</p>
       </div>`;
     }
   }
