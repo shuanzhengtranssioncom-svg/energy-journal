@@ -3,7 +3,7 @@ import os
 import urllib.request
 import urllib.error
 
-from flask import Flask, jsonify, render_template, make_response, request
+from flask import Flask, jsonify, redirect, render_template, make_response, request
 
 app = Flask(__name__)
 
@@ -45,6 +45,11 @@ def chat(system_prompt, user_message):
         raise RuntimeError(f"API error {e.code}: {msg[:200]}")
     except urllib.error.URLError as e:
         raise RuntimeError(f"Network error: {e.reason}")
+
+
+@app.route("/")
+def index():
+    return redirect("/energy-journal")
 
 
 @app.route("/energy-journal")
