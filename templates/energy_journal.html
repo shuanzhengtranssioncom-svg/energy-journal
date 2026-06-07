@@ -842,25 +842,26 @@ async function saveToday(idx) {
     saveData(DATA);
     showFeedback(feedbackText);
 
-    // Check if week just completed
-    if (isWeekComplete && !DATA.week_review) {
-      try {
-        const resp = await fetch('/api/energy-journal/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
-        });
-        if (resp.ok) {
-          const result = await resp.json();
-          if (result.week_review) DATA.week_review = result.week_review;
-        }
-      } catch (e) {}
-      saveData(DATA);
-
+    // Day 7 filled — set pending summary (even if not all days complete)
+    if (idx === 6) {
+      if (isWeekComplete && !DATA.week_review) {
+        try {
+          const resp = await fetch('/api/energy-journal/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
+          });
+          if (resp.ok) {
+            const result = await resp.json();
+            if (result.week_review) DATA.week_review = result.week_review;
+          }
+        } catch (e) {}
+        saveData(DATA);
+      }
       DATA._pending_summary = {
         week_start: DATA.current_week_start,
         entries: { ...DATA.entries },
-        completed_days: 7
+        completed_days: weekEntries.length
       };
       saveData(DATA);
       render();
@@ -922,24 +923,25 @@ async function saveTodayFromMonth(idx, weekIdx) {
     saveData(DATA);
     showFeedback(feedbackText);
 
-    if (isWeekComplete && !DATA.week_review) {
-      try {
-        const resp = await fetch('/api/energy-journal/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
-        });
-        if (resp.ok) {
-          const result = await resp.json();
-          if (result.week_review) DATA.week_review = result.week_review;
-        }
-      } catch (e) {}
-      saveData(DATA);
-
+    if (idx === 6) {
+      if (isWeekComplete && !DATA.week_review) {
+        try {
+          const resp = await fetch('/api/energy-journal/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
+          });
+          if (resp.ok) {
+            const result = await resp.json();
+            if (result.week_review) DATA.week_review = result.week_review;
+          }
+        } catch (e) {}
+        saveData(DATA);
+      }
       DATA._pending_summary = {
         week_start: DATA.current_week_start,
         entries: { ...DATA.entries },
-        completed_days: 7
+        completed_days: weekEntries.length
       };
       saveData(DATA);
       render();
@@ -1076,11 +1078,13 @@ function showWeekReviewPopup() {
   const entriesArr = Object.values(summary.entries).filter(e => e);
   const actions = entriesArr.map(e => e.action).join('、');
   const weekLabel = getWeekLabel(summary.week_start);
+  const completedDays = summary.completed_days || entriesArr.length;
+  const daysText = completedDays === 7 ? '7 天' : `<span style="color:#C3A485; font-weight:600;">${completedDays}</span> 天`;
   document.getElementById('review-summary').innerHTML = `
     <p style="font-size:12px; color:#62596B; margin-bottom:6px;">📅 ${weekLabel}</p>
-    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-bottom:6px;">这一周你完成了 <span style="color:#C3A485; font-weight:600;">7 天</span> 的记录：</p>
+    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-bottom:6px;">这一周你完成了 ${daysText} 的记录：</p>
     <p style="font-size:12px; color:#62596B; line-height:1.5;">${escapeHtml(actions)}</p>
-    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-top:8px;">这7天，你用双手创造了属于自己的能量。每一次行动都在证明——你比自己想象的更有力量。新的一周，继续向前！</p>
+    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-top:8px;">${completedDays === 7 ? '这7天，你用双手创造了属于自己的能量。' : '无论几天，每一次行动都值得被看见。'}每一次行动都在证明——你比自己想象的更有力量。新的一周，继续向前！</p>
   `;
   document.getElementById('popup-new-week').classList.remove('hidden');
 }
