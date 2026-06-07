@@ -1074,7 +1074,10 @@ function startNewWeek() {
   if (summary && summary.week_start === DATA.current_week_start) {
     const nextMonday = new Date(DATA.current_week_start + 'T00:00:00');
     nextMonday.setDate(nextMonday.getDate() + 7);
-    DATA.current_week_start = nextMonday.toISOString().split('T')[0];
+    const y = nextMonday.getFullYear();
+    const m = String(nextMonday.getMonth() + 1).padStart(2, '0');
+    const d = String(nextMonday.getDate()).padStart(2, '0');
+    DATA.current_week_start = `${y}-${m}-${d}`;
     DATA.entries = {};
     DATA.week_review = null;
   }
