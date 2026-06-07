@@ -402,7 +402,8 @@ function getWeekLabel(weekStartStr) {
 
 function checkWeekIntegrity() {
   const thisMonday = getMondayStr();
-  if (DATA.current_week_start !== thisMonday) {
+  // Only reset when current week is in the past — not when user has advanced forward
+  if (DATA.current_week_start < thisMonday) {
     const hasEntries = Object.values(DATA.entries).some(e => e !== null && e !== undefined);
     if (hasEntries) {
       const completedDays = Object.values(DATA.entries).filter(e => e).length;
