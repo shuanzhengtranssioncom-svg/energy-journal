@@ -186,6 +186,8 @@ tailwind.config = {
     <span class="text-xs text-premium-accent">🌟 你在行动</span>
     <span class="text-xs text-premium-textMuted mx-2">·</span>
     <span id="footer-saved" class="text-xs text-premium-textMuted">刚刚保存</span>
+    <span class="text-xs text-premium-textMuted mx-2">·</span>
+    <a href="javascript:clearAllData()" class="text-xs text-premium-rose underline opacity-50 hover:opacity-100 transition-opacity">清空数据</a>
   </div>
 
 </div>
@@ -281,6 +283,13 @@ setInterval(() => {
   else if (sec < 3600) el.textContent = `${Math.floor(sec / 60)} 分钟前保存`;
   else el.textContent = `${Math.floor(sec / 3600)} 小时前保存`;
 }, 30000);
+
+function clearAllData() {
+  if (!confirm('确定要清空所有能量日记数据吗？此操作不可恢复。建议先导出备份。')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_V1);
+  location.reload();
+}
 
 function exportData() {
   const data = loadData();
