@@ -1276,6 +1276,15 @@ function init() {
   if (DATA.archived_weeks) {
     DATA.archived_weeks = DATA.archived_weeks.filter(w => isValidDateStr(w.week_start));
   }
+  // If day 7 has an entry for current week but no pending summary, set one
+  if (!DATA._pending_summary && DATA.current_week_start === getMondayStr() && DATA.entries[6]) {
+    DATA._pending_summary = {
+      week_start: DATA.current_week_start,
+      entries: { ...DATA.entries },
+      completed_days: Object.values(DATA.entries).filter(e => e).length
+    };
+    saveData(DATA);
+  }
   render();
 }
 
