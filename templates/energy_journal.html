@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F1F5">
+<title>能量日记</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+SC:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        premium: {
+          bg: '#F3F1F5', panel: '#EAE6ED', accent: '#C3A485',
+          accentLight: '#F4EAE1', rose: '#DB9280', violet: '#8D8BA7',
+          textMain: '#1C1324', textMuted: '#62596B', border: '#E4DFE8',
+        }
+      },
+      fontFamily: {
+        serif: ['Cinzel', 'Noto Serif SC', 'serif'],
+        sans: ['Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  html, body { height: 100%; overflow: hidden; -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
+  body {
+    background: #F3F1F5;
+    background-image: radial-gradient(#EAE6ED 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+  }
+  .app {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    max-width: 640px; margin: 0 auto;
+    background: #FAF8F5; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px 100px; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-in { animation: fadeInUp 0.35s ease-out; }
+  .slide-down {
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.35s ease, margin 0.35s ease;
+    max-height: 600px; opacity: 1;
+  }
+  .slide-down.hidden { display: block !important; max-height: 0 !important; opacity: 0 !important; margin-top: 0 !important; margin-bottom: 0 !important; }
+  .gratitude-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C3A485' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+  .tab-active { color: #C3A485; border-bottom: 2px solid #C3A485; }
+  .week-row { transition: all 0.2s ease; }
+  .week-row:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-premium-accentLight flex items-center justify-center">
+        <i class="fa-solid fa-hand text-premium-accent text-sm"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold text-premium-textMain leading-tight">能量日记</h1>
+        <p class="text-xs text-premium-textMuted">用身体去行动，触碰生活</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex gap-0 border-b border-premium-border">
+        <button id="tab-week" class="tab-active" onclick="switchView('week')" style="padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; transition:all 0.2s;">
+          <i class="fa-solid fa-calendar-week text-xs mr-1"></i>周
+        </button>
+        <button id="tab-month" onclick="switchView('month')" style="padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; color:#62596B; transition:all 0.2s;">
+          <i class="fa-solid fa-calendar text-xs mr-1"></i>月
+        </button>
+      </div>
+      <button id="btn-history" onclick="showHistory()" class="w-8 h-8 rounded-full flex items-center justify-center text-premium-textMuted hover:bg-premium-panel transition-colors">
+        <i class="fa-regular fa-clock text-base"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Week View -->
+  <div id="screen-week" class="scroll-area no-scrollbar">
+    <div id="week-cards" class="flex flex-col gap-3 pb-6"></div>
+  </div>
+
+  <!-- Month View -->
+  <div id="screen-month" class="scroll-area no-scrollbar hidden">
+    <div id="month-content"></div>
+  </div>
+
+  <!-- History List -->
+  <div id="screen-history" class="scroll-area no-scrollbar hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="showCurrentWeek()" class="w-8 h-8 rounded-full flex items-center justify-center text-premium-textMuted hover:bg-premium-panel transition-colors">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <h2 class="text-lg font-semibold text-premium-textMain">历史回顾</h2>
+      <div class="flex gap-2 ml-auto">
+        <button onclick="exportData()" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-premium-border text-premium-textMuted hover:bg-premium-panel transition-colors">
+          <i class="fa-solid fa-download text-xs mr-1"></i>导出
+        </button>
+        <button onclick="document.getElementById('import-file').click()" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-premium-border text-premium-textMuted hover:bg-premium-panel transition-colors">
+          <i class="fa-solid fa-upload text-xs mr-1"></i>导入
+        </button>
+      </div>
+    </div>
+    <div id="history-list" class="flex flex-col gap-3 pb-6"></div>
+    <div id="history-empty" class="flex flex-col items-center justify-center py-16 text-premium-textMuted hidden">
+      <div class="text-4xl mb-3">📭</div>
+      <p class="text-sm">还没有完成的周记录</p>
+      <p class="text-xs mt-1">完成一周后，它会出现在这里</p>
+    </div>
+  </div>
+
+  <!-- History Detail -->
+  <div id="screen-history-detail" class="scroll-area no-scrollbar hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <!-- Hidden file input for import -->
+      <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none;">
+
+      <button onclick="backToHistoryList()" class="w-8 h-8 rounded-full flex items-center justify-center text-premium-textMuted hover:bg-premium-panel transition-colors">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <h2 id="detail-title" class="text-lg font-semibold text-premium-textMain"></h2>
+    </div>
+    <div id="history-detail-cards" class="flex flex-col gap-3 pb-6"></div>
+  </div>
+
+  <!-- AI Feedback Popup -->
+  <div id="popup-feedback" class="absolute inset-0 z-50 flex items-end justify-center pointer-events-none hidden">
+    <div class="absolute inset-0 bg-black/30 pointer-events-auto" onclick="closeFeedback()"></div>
+    <div class="relative w-full max-w-lg bg-white rounded-t-2xl px-5 pt-6 pb-8 pointer-events-auto msg-in shadow-lg" style="padding-bottom: max(32px, env(safe-area-inset-bottom));">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #DB9280 0%, #C3A485 100%);">
+          <i class="fa-solid fa-heart-pulse text-white text-sm"></i>
+        </div>
+        <span class="text-sm font-semibold text-premium-textMain">安心回应</span>
+      </div>
+      <p id="feedback-text" class="text-premium-textMain leading-relaxed text-sm"></p>
+      <button onclick="closeFeedback()" class="mt-5 w-full py-3 rounded-xl bg-premium-accent text-white font-medium text-sm hover:opacity-90 transition-opacity">
+        收下这份温暖
+      </button>
+    </div>
+  </div>
+
+  <!-- Week Review Popup -->
+  <div id="popup-new-week" class="absolute inset-0 z-50 flex items-end justify-center pointer-events-none hidden">
+    <div class="absolute inset-0 bg-black/30 pointer-events-auto" onclick="closeNewWeekPopup()"></div>
+    <div class="relative w-full max-w-lg bg-white rounded-t-2xl px-5 pt-6 pb-8 pointer-events-auto msg-in" style="padding-bottom: max(32px, env(safe-area-inset-bottom));">
+      <p style="font-size:28px; margin-bottom:8px; text-align:center;">🎉</p>
+      <p style="font-size:16px; font-weight:600; color:#1C1324; text-align:center; margin-bottom:14px;">新的一周开始了</p>
+      <div id="review-summary" style="background:#F4EAE1; border-radius:12px; padding:14px; margin-bottom:16px;"></div>
+      <div class="flex gap-3">
+        <button onclick="closeNewWeekPopup()" class="flex-1 py-3 rounded-xl border border-premium-border text-premium-textMuted font-medium text-sm hover:bg-premium-panel transition-colors">稍后再说</button>
+        <button onclick="startNewWeek()" class="flex-1 py-3 rounded-xl bg-premium-accent text-white font-medium text-sm hover:opacity-90 transition-opacity">开始新一周</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:200; background:#1C1324; color:white; padding:10px 20px; border-radius:20px; font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap;"></div>
+
+  <!-- Footer -->
+  <div class="shrink-0 text-center py-3 border-t border-premium-border bg-white/90 backdrop-blur-xl" style="padding-bottom: max(12px, env(safe-area-inset-bottom));">
+    <span id="footer-text" class="text-xs text-premium-textMuted">第 0 / 7 天</span>
+    <span class="text-xs text-premium-textMuted mx-2">·</span>
+    <span class="text-xs text-premium-accent">🌟 你在行动</span>
+    <span class="text-xs text-premium-textMuted mx-2">·</span>
+    <span id="footer-saved" class="text-xs text-premium-textMuted">刚刚保存</span>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// Data Model
+// ═══════════════════════════════════════════════════════════════
+
+const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const GRATITUDE_OPTIONS = ['双手', '双脚', '眼睛', '耳朵', '身体', '其他'];
+const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
+const STORAGE_KEY = 'energy_journal_v2';
+const STORAGE_KEY_V1 = 'energy_journal_data';
+const MAX_EDITS = 2;
+
+function getMonday() {
+  const d = new Date();
+  const today = d.getDay();
+  d.setDate(d.getDate() - (today === 0 ? 6 : today - 1));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getMondayStr() {
+  const m = getMonday();
+  return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}-${String(m.getDate()).padStart(2, '0')}`;
+}
+
+function isValidDateStr(str) {
+  if (!str || typeof str !== 'string') return false;
+  const d = new Date(str + 'T00:00:00');
+  return !isNaN(d.getTime());
+}
+
+function safeDate(fn) {
+  try { const v = fn(); return isNaN(v) ? '--' : v; } catch (e) { return '--'; }
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined || str === '') return '';
+  if (typeof str !== 'string') str = String(str);
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function loadData() {
+  try {
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      delete data._demo_mode;
+      delete data._seed_version;
+      return data;
+    }
+    raw = localStorage.getItem(STORAGE_KEY_V1);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (!isValidDateStr(data.current_week_start)) {
+        data.current_week_start = getMondayStr();
+      }
+      if (data.archived_weeks) {
+        data.archived_weeks = data.archived_weeks.filter(w => isValidDateStr(w.week_start));
+      }
+      delete data._demo_mode;
+      delete data._seed_version;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return data;
+    }
+  } catch (e) {}
+  return { current_week_start: getMondayStr(), entries: {}, archived_weeks: [] };
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+  updateSaveTime();
+}
+
+let _lastSave = Date.now();
+function updateSaveTime() {
+  _lastSave = Date.now();
+  const el = document.getElementById('footer-saved');
+  if (el) el.textContent = '刚刚保存';
+}
+
+// Auto-update relative time every 30s
+setInterval(() => {
+  const el = document.getElementById('footer-saved');
+  if (!el) return;
+  const sec = Math.floor((Date.now() - _lastSave) / 1000);
+  if (sec < 60) el.textContent = '刚刚保存';
+  else if (sec < 3600) el.textContent = `${Math.floor(sec / 60)} 分钟前保存`;
+  else el.textContent = `${Math.floor(sec / 3600)} 小时前保存`;
+}, 30000);
+
+function exportData() {
+  const data = loadData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  a.download = `能量日记备份-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ 数据已导出', 1500);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.current_week_start || !imported.entries) {
+        showToast('⚠️ 文件格式不正确', 2000);
+        return;
+      }
+      // Clean and validate
+      if (!isValidDateStr(imported.current_week_start)) {
+        imported.current_week_start = getMondayStr();
+      }
+      if (imported.archived_weeks) {
+        imported.archived_weeks = imported.archived_weeks.filter(w => isValidDateStr(w.week_start));
+      }
+      delete imported._demo_mode;
+      delete imported._seed_version;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+      DATA = imported;
+      EXPANDED_WEEK_IDX = null;
+      render();
+      showCurrentWeek();
+      showToast('✅ 数据已导入', 1500);
+    } catch (err) {
+      showToast('⚠️ 文件读取失败，请检查文件', 2000);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+let DATA = loadData();
+let VIEW_MODE = 'week';
+let EXPANDED_WEEK_IDX = null;
+let preHistoryViewMode = 'week';
+
+// ═══════════════════════════════════════════════════════════════
+// View Helpers
+// ═══════════════════════════════════════════════════════════════
+
+function getToday() { return new Date().getDay(); }
+
+function isToday(dayIdx) {
+  const today = getToday();
+  return dayIdx === (today === 0 ? 6 : today - 1);
+}
+
+function isPast(dayIdx) {
+  const todayIdx = getToday() === 0 ? 6 : getToday() - 1;
+  return dayIdx < todayIdx;
+}
+
+function isFuture(dayIdx) {
+  return !isToday(dayIdx) && !isPast(dayIdx);
+}
+
+function isCurrentWeek() {
+  return DATA.current_week_start === getMondayStr();
+}
+
+function getWeekDateRange(weekStartStr) {
+  const start = new Date(weekStartStr + 'T00:00:00');
+  if (isNaN(start.getTime())) return '';
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = d => `${safeDate(() => d.getMonth() + 1)}.${safeDate(() => d.getDate())}`;
+  return `${fmt(start)} - ${fmt(end)}`;
+}
+
+function getWeekLabel(weekStartStr) {
+  const start = new Date(weekStartStr);
+  if (isNaN(start.getTime())) return '日期异常';
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const month = start.getMonth() + 1;
+  const endMonth = end.getMonth() + 1;
+  const getWeekOfMonth = d => {
+    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+    return Math.ceil((d.getDate() + firstDay) / 7);
+  };
+  const weekNum = getWeekOfMonth(start);
+  const range = month === endMonth
+    ? `${month}月${start.getDate()}日-${end.getDate()}日`
+    : `${month}月${start.getDate()}日-${endMonth}月${end.getDate()}日`;
+  return `${month}月第${weekNum}周（${range}）`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Week View Rendering
+// ═══════════════════════════════════════════════════════════════
+
+function checkWeekIntegrity() {
+  const thisMonday = getMondayStr();
+  if (DATA.current_week_start !== thisMonday) {
+    const hasEntries = Object.values(DATA.entries).some(e => e !== null && e !== undefined);
+    if (hasEntries) {
+      const completedDays = Object.values(DATA.entries).filter(e => e).length;
+      const weekData = {
+        week_start: DATA.current_week_start,
+        entries: { ...DATA.entries },
+        week_review: DATA.week_review || null,
+        completed_days: completedDays
+      };
+      DATA.archived_weeks.unshift(weekData);
+      if (completedDays === 7) {
+        DATA._pending_summary = weekData;
+      }
+    }
+    DATA.current_week_start = thisMonday;
+    DATA.entries = {};
+    DATA.week_review = null;
+    saveData(DATA);
+  }
+}
+
+function renderWeekView() {
+  checkWeekIntegrity();
+
+  if (!isValidDateStr(DATA.current_week_start)) {
+    DATA.current_week_start = getMondayStr();
+    saveData(DATA);
+  }
+
+  const mondayStr = DATA.current_week_start;
+  const thisMonday = getMondayStr();
+  const isThisWeek = mondayStr === thisMonday;
+  const dateRange = getWeekDateRange(mondayStr);
+
+  let completedCount = 0;
+  let html = '';
+
+  html += `
+  <div style="margin-bottom:16px; text-align:center;">
+    <p style="font-size:13px; color:#8D8BA7;">${dateRange}</p>
+    ${isThisWeek ? '<p style="font-size:12px; color:#C3A485; margin-top:2px;">📌 当前周</p>' : ''}
+  </div>`;
+
+  for (let i = 0; i < 7; i++) {
+    const entry = DATA.entries[i] || null;
+    const today = isToday(i) && isThisWeek;
+    const past = isPast(i) && isThisWeek;
+    const future = isFuture(i) && isThisWeek;
+
+    const mondayDate = new Date(mondayStr + 'T00:00:00');
+    mondayDate.setDate(mondayDate.getDate() + i);
+    const dateStr = `${safeDate(() => mondayDate.getMonth() + 1)}/${safeDate(() => mondayDate.getDate())} 周${WEEKDAY_CN[safeDate(() => mondayDate.getDay())] || '--'}`;
+
+    if (entry) completedCount++;
+
+    if (entry && !today) {
+      html += `
+      <div class="bg-premium-panel rounded-xl px-4 py-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="toggleCompleted(${i})">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-premium-accentLight flex items-center justify-center">
+              <i class="fa-solid fa-check text-premium-accent text-xs"></i>
+            </span>
+            <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+            <span class="text-xs text-premium-textMuted">${dateStr}</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-premium-textMuted text-xs transition-transform" id="chevron-${i}"></i>
+        </div>
+        <p class="text-sm text-premium-textMain ml-7">${escapeHtml(entry.action)}</p>
+        <p class="text-xs text-premium-textMuted ml-7 mt-0.5">${escapeHtml(entry.feeling)}</p>
+        <div id="expanded-${i}" class="hidden slide-down mt-3 ml-7 pl-3 border-l-2 border-premium-accentLight">
+          <p class="text-xs text-premium-textMuted mb-1">感谢我的<span class="text-premium-accent font-medium">${escapeHtml(entry.thanks_target)}</span>：</p>
+          <p class="text-xs text-premium-textMain italic">"${escapeHtml(entry.thanks)}"</p>
+          ${entry.ai_feedback ? `
+          <div class="mt-2 bg-premium-accentLight rounded-lg px-3 py-2">
+            <p class="text-xs text-premium-textMain">💫 ${escapeHtml(entry.ai_feedback)}</p>
+          </div>` : ''}
+        </div>
+      </div>`;
+    } else if (today && !entry) {
+      html += `
+      <div id="card-today" class="bg-white rounded-xl px-4 py-4 border-2 border-premium-accent">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2 py-0.5 rounded-full bg-premium-accentLight text-premium-accent text-xs font-medium">今天</span>
+          <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-premium-textMuted mb-1 block">📝 今天我做了什么？</label>
+            <textarea id="input-action" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors" placeholder="比如：叠了被子、洗了杯子、走去菜市场..."></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-premium-textMuted mb-1 block">💭 做完后我的感受是？</label>
+            <textarea id="input-feeling" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors" placeholder="哪怕是很小的感觉，也值得被看见"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-premium-textMuted mb-1 block">🙏 感谢我的</label>
+            <div class="flex gap-2">
+              <select id="input-thanks-target" class="gratitude-select bg-premium-accentLight rounded-lg px-4 py-2 text-sm text-premium-accent font-medium outline-none shrink-0">${GRATITUDE_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('')}</select>
+              <input id="input-thanks" type="text" class="flex-1 bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain outline-none border border-premium-border focus:border-premium-accent transition-colors" placeholder="谢谢我的...帮我...">
+            </div>
+          </div>
+          <button onclick="saveToday(${i})" class="w-full py-3 rounded-xl bg-premium-accent text-white font-medium text-sm hover:opacity-90 transition-opacity">保存今天的记录</button>
+          <p id="save-error" class="text-xs text-rose-400 text-center hidden"></p>
+        </div>
+      </div>`;
+    } else if (today && entry) {
+      const editCount = entry.edit_count || 1;
+      const locked = editCount >= MAX_EDITS;
+      const lockedBadge = locked ? '<span style="padding:1px 6px; border-radius:8px; background:#DB9280; color:white; font-size:10px; margin-left:4px;">已锁定</span>' : '';
+
+      html += `
+      <div class="bg-white rounded-xl px-4 py-3 border-2 border-premium-accent">
+        <div class="cursor-pointer" onclick="toggleTodayCard()">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-premium-accentLight flex items-center justify-center">
+                <i class="fa-solid fa-check text-premium-accent text-xs"></i>
+              </span>
+              <span class="px-2 py-0.5 rounded-full bg-premium-accentLight text-premium-accent text-xs font-medium">今天</span>
+              <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+              <span class="text-xs text-premium-textMuted">${dateStr}</span>
+              ${lockedBadge}
+            </div>
+            <i class="fa-solid fa-chevron-down text-premium-accent text-xs transition-transform" id="chevron-today"></i>
+          </div>
+          <p class="text-sm text-premium-textMain ml-7">${escapeHtml(entry.action)}</p>
+          <p class="text-xs text-premium-textMuted ml-7 mt-0.5">${escapeHtml(entry.feeling)}</p>
+        </div>
+        <div id="expanded-today" class="hidden slide-down ml-7 pl-3 border-l-2 border-premium-accentLight mt-3">
+          ${locked ? `
+            <div style="padding-top:4px;">
+              <p class="text-xs text-premium-textMuted mb-1">感谢我的<span class="text-premium-accent font-medium">${escapeHtml(entry.thanks_target)}</span>：</p>
+              <p class="text-xs text-premium-textMain italic">"${escapeHtml(entry.thanks)}"</p>
+              ${entry.ai_feedback ? `<div class="mt-2 bg-premium-accentLight rounded-lg px-3 py-2"><p class="text-xs text-premium-textMain">💫 ${escapeHtml(entry.ai_feedback)}</p></div>` : ''}
+              <p style="font-size:11px; color:#8D8BA7; margin-top:8px;">🔒 今日已修改 2 次，记录已锁定</p>
+            </div>
+          ` : `
+            <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px;">
+              <div>
+                <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">📝 修改记录</label>
+                <textarea id="input-action-edit" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors">${escapeHtml(entry.action)}</textarea>
+              </div>
+              <div>
+                <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">💭 修改感受</label>
+                <textarea id="input-feeling-edit" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors">${escapeHtml(entry.feeling)}</textarea>
+              </div>
+              <div>
+                <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">🙏 修改感谢</label>
+                <div class="flex gap-2">
+                  <select id="input-thanks-edit-target" class="gratitude-select bg-premium-accentLight rounded-lg px-3 py-2 text-sm text-premium-accent font-medium outline-none">${GRATITUDE_OPTIONS.map(o => `<option value="${o}" ${entry.thanks_target === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                  <input id="input-thanks-edit" type="text" class="flex-1 bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain outline-none border border-premium-border focus:border-premium-accent transition-colors" value="${escapeHtml(entry.thanks)}">
+                </div>
+              </div>
+              <p style="font-size:10px; color:#8D8BA7; text-align:center;">💡 每天最多修改 2 次</p>
+              <button onclick="saveTodayEdit(${i})" class="w-full py-2.5 rounded-xl bg-premium-accent text-white font-medium text-sm hover:opacity-90 transition-opacity">保存修改</button>
+              <p id="save-edit-error" class="text-xs text-rose-400 text-center hidden"></p>
+            </div>
+          `}
+        </div>
+      </div>`;
+    } else if (future) {
+      html += `
+      <div class="rounded-xl px-4 py-3 border border-dashed border-premium-border opacity-60">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-premium-border flex items-center justify-center">
+            <i class="fa-solid fa-minus text-premium-textMuted text-xs"></i>
+          </span>
+          <span class="text-sm text-premium-textMuted">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <p class="text-xs text-premium-textMuted ml-7 mt-1">🌫️ 还没发生，留点期待</p>
+      </div>`;
+    } else {
+      html += `
+      <div class="rounded-xl px-4 py-3 border border-dashed border-premium-border opacity-60">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-premium-border flex items-center justify-center">
+            <i class="fa-solid fa-minus text-premium-textMuted text-xs"></i>
+          </span>
+          <span class="text-sm text-premium-textMuted">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <p class="text-xs text-premium-textMuted ml-7 mt-1">错过了，没关系</p>
+      </div>`;
+    }
+  }
+
+  document.getElementById('week-cards').innerHTML = html;
+  document.getElementById('footer-text').textContent = `第 ${completedCount} / 7 天`;
+
+  if (DATA._pending_summary) {
+    setTimeout(() => showWeekReviewPopup(), 500);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Month View Rendering
+// ═══════════════════════════════════════════════════════════════
+
+function getWeeksOfMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const weeks = [];
+
+  const currentStart = DATA.current_week_start;
+  const cd = new Date(currentStart + 'T00:00:00');
+  if (!isNaN(cd.getTime())) {
+    weeks.push({
+      week_start: currentStart,
+      entries: DATA.entries,
+      week_review: DATA.week_review || null,
+      completed_days: Object.values(DATA.entries).filter(e => e).length,
+      is_current: true
+    });
+  }
+
+  for (const w of DATA.archived_weeks || []) {
+    const d = new Date(w.week_start + 'T00:00:00');
+    if (!isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month) {
+      if (w.week_start === currentStart) continue;
+      weeks.push({ ...w, is_current: false });
+    }
+  }
+
+  weeks.sort((a, b) => new Date(b.week_start) - new Date(a.week_start));
+  return weeks;
+}
+
+function renderMonthView() {
+  const weeks = getWeeksOfMonth();
+  const now = new Date();
+  const monthName = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+
+  let html = `
+  <div style="text-align:center; margin-bottom:16px;">
+    <p style="font-size:16px; font-weight:600; color:#1C1324;">${monthName}</p>
+  </div>`;
+
+  if (weeks.length === 0) {
+    html += `
+    <div class="flex flex-col items-center justify-center py-16 text-premium-textMuted">
+      <div class="text-4xl mb-3">📭</div>
+      <p class="text-sm">本月还没有记录</p>
+      <p class="text-xs mt-1">切换到周视图开始记录吧</p>
+    </div>`;
+  }
+
+  for (let i = 0; i < weeks.length; i++) {
+    const w = weeks[i];
+    const isExpanded = EXPANDED_WEEK_IDX === i;
+
+    html += `
+    <div class="week-row" onclick="toggleMonthWeek(${i})" style="
+      background:${w.is_current ? 'white' : '#EAE6ED'};
+      border-radius:12px; padding:14px 16px; margin-bottom:10px; cursor:pointer;
+      ${w.is_current ? 'border:1.5px solid #C3A485;' : ''}
+    ">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <p style="font-size:14px; font-weight:500; color:#1C1324;">${getWeekLabel(w.week_start)}</p>
+            ${w.is_current ? '<span style="padding:1px 6px; border-radius:8px; background:#F4EAE1; color:#C3A485; font-size:10px;">当前</span>' : ''}
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:#62596B;">完成 ${w.completed_days || 0} 天</span>
+            <span style="font-size:12px; color:#C3A485;">
+              ${'●'.repeat(w.completed_days || 0)}${'○'.repeat(7 - (w.completed_days || 0))}
+            </span>
+          </div>
+        </div>
+        <i class="fa-solid fa-chevron-down" id="month-chevron-${i}" style="color:#62596B; font-size:12px; transition:transform 0.3s; ${isExpanded ? 'transform:rotate(180deg);' : ''}"></i>
+      </div>`;
+
+    const entriesArr = Object.values(w.entries || {}).filter(e => e);
+    if (entriesArr.length > 0) {
+      html += `
+      <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+        ${entriesArr.slice(0, 3).map(e => `
+          <span style="background:#F4EAE1; color:#C3A485; padding:2px 8px; border-radius:6px; font-size:11px;">${escapeHtml(e.action.slice(0, 8))}${e.action.length > 8 ? '...' : ''}</span>
+        `).join('')}
+        ${entriesArr.length > 3 ? `<span style="font-size:11px; color:#8D8BA7; padding:2px 4px;">+${entriesArr.length - 3}</span>` : ''}
+      </div>`;
+    }
+
+    html += `</div>`;
+
+    html += `
+    <div id="month-week-detail-${i}" class="${isExpanded ? '' : 'hidden'} slide-down" style="margin:-4px 0 10px 0; background:white; border-radius:0 0 12px 12px; padding:${isExpanded ? '0 16px 16px 16px' : '0 16px'};">
+      ${renderMonthWeekDetail(w, i)}
+    </div>`;
+  }
+
+  document.getElementById('month-content').innerHTML = html;
+  document.getElementById('footer-text').textContent = `共 ${weeks.length} 周记录`;
+}
+
+function renderMonthWeekDetail(w, weekIdx) {
+  if (!isValidDateStr(w.week_start)) return '<p style="color:#DB9280; font-size:13px;">日期数据异常</p>';
+
+  let html = '';
+
+  if (w.week_review) {
+    html += `
+    <div class="bg-premium-accentLight rounded-xl px-4 py-3 mb-3">
+      <p class="text-xs text-premium-accent font-medium mb-1">💫 一周回顾</p>
+      <p class="text-sm text-premium-textMain leading-relaxed">${escapeHtml(w.week_review)}</p>
+    </div>`;
+  }
+
+  for (let i = 0; i < 7; i++) {
+    const entry = (w.entries && w.entries[i]) || null;
+    const mondayDate = new Date(w.week_start + 'T00:00:00');
+    if (isNaN(mondayDate.getTime())) continue;
+    mondayDate.setDate(mondayDate.getDate() + i);
+    const dateStr = `${safeDate(() => mondayDate.getMonth() + 1)}/${safeDate(() => mondayDate.getDate())} 周${WEEKDAY_CN[safeDate(() => mondayDate.getDay())] || '--'}`;
+    const isCurrentWeek = w.week_start === getMondayStr();
+    const today = isCurrentWeek && isToday(i);
+
+    if (entry) {
+      if (today) {
+        html += `
+        <div class="bg-white rounded-xl px-4 py-3 border-1.5 border-premium-accent mb-2" style="border:1.5px solid #C3A485;">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-full bg-premium-accentLight text-premium-accent text-xs font-medium">今天</span>
+            <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+            <span class="text-xs text-premium-textMuted">${dateStr}</span>
+          </div>
+          <div class="space-y-2">
+            <div>
+              <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">📝 今天我做了什么？</label>
+              <textarea id="input-action-month" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors">${escapeHtml(entry.action)}</textarea>
+            </div>
+            <div>
+              <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">💭 感受</label>
+              <textarea id="input-feeling-month" rows="2" class="w-full bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain resize-none outline-none border border-premium-border focus:border-premium-accent transition-colors">${escapeHtml(entry.feeling)}</textarea>
+            </div>
+            <div>
+              <label style="font-size:11px; color:#62596B; display:block; margin-bottom:2px;">🙏 感谢我的</label>
+              <div class="flex gap-2">
+                <select id="input-thanks-target-month" class="gratitude-select bg-premium-accentLight rounded-lg px-3 py-2 text-sm text-premium-accent font-medium outline-none">${GRATITUDE_OPTIONS.map(o => `<option value="${o}" ${entry.thanks_target === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                <input id="input-thanks-month" type="text" class="flex-1 bg-premium-bg rounded-lg px-3 py-2 text-sm text-premium-textMain outline-none border border-premium-border focus:border-premium-accent transition-colors" value="${escapeHtml(entry.thanks)}">
+              </div>
+            </div>
+            <button onclick="saveTodayFromMonth(${i}, ${weekIdx})" class="w-full py-2.5 rounded-xl bg-premium-accent text-white font-medium text-sm hover:opacity-90 transition-opacity">更新今天的记录</button>
+            <p id="save-error-month" class="text-xs text-rose-400 text-center hidden"></p>
+          </div>
+        </div>`;
+      } else {
+        html += `
+        <div class="bg-premium-panel rounded-xl px-4 py-3 mb-2">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-4 h-4 rounded-full bg-premium-accentLight flex items-center justify-center">
+              <i class="fa-solid fa-check text-premium-accent text-2xs" style="font-size:8px;"></i>
+            </span>
+            <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+            <span class="text-xs text-premium-textMuted">${dateStr}</span>
+          </div>
+          <p class="text-sm text-premium-textMain ml-6">${escapeHtml(entry.action)}</p>
+          <p class="text-xs text-premium-textMuted ml-6 mt-0.5">${escapeHtml(entry.feeling)}</p>
+          <div class="ml-6 mt-2 pl-2 border-l-2 border-premium-accentLight">
+            <p class="text-xs text-premium-textMuted">感谢<span class="text-premium-accent font-medium">${escapeHtml(entry.thanks_target)}</span>：<span class="italic">"${escapeHtml(entry.thanks)}"</span></p>
+          </div>
+        </div>`;
+      }
+    } else {
+      html += `
+      <div class="rounded-xl px-4 py-3 mb-2 border border-dashed border-premium-border opacity-50">
+        <div class="flex items-center gap-2">
+          <span class="w-4 h-4 rounded-full bg-premium-border"></span>
+          <span class="text-sm text-premium-textMuted">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <p class="text-xs text-premium-textMuted ml-6 mt-1">${i < Object.keys(w.entries || {}).filter(k => w.entries[k]).length ? '错过了，没关系' : '还没发生'}</p>
+      </div>`;
+    }
+  }
+
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Actions
+// ═══════════════════════════════════════════════════════════════
+
+async function saveToday(idx) {
+  const action = document.getElementById('input-action').value.trim();
+  const feeling = document.getElementById('input-feeling').value.trim();
+  const thanksTarget = document.getElementById('input-thanks-target').value;
+  const thanks = document.getElementById('input-thanks').value.trim();
+  const errEl = document.getElementById('save-error');
+
+  if (!action) { errEl.textContent = '请写下一件你今天做的事'; errEl.classList.remove('hidden'); return; }
+  if (!feeling) { errEl.textContent = '请写下你的感受，哪怕很小也值得被看见'; errEl.classList.remove('hidden'); return; }
+  if (!thanks) { errEl.textContent = '请感谢你的身体，它今天帮了你'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  checkWeekIntegrity();
+
+  const prev = DATA.entries[idx];
+  let editCount;
+  if (!prev) {
+    editCount = 1;
+  } else {
+    const hasChanged = prev.action !== action || prev.feeling !== feeling || prev.thanks_target !== thanksTarget || prev.thanks !== thanks;
+    editCount = hasChanged ? (prev.edit_count || 1) + 1 : (prev.edit_count || 1);
+  }
+
+  DATA.entries[idx] = { action, feeling, thanks_target: thanksTarget, thanks, saved_at: new Date().toISOString(), edit_count: editCount };
+  saveData(DATA);
+  render();
+
+  if (editCount >= MAX_EDITS) {
+    setTimeout(() => showToast('✅ 今天的记录已锁定', 1500), 200);
+  } else {
+    // Fetch AI encouragement asynchronously
+    const weekEntries = [];
+    for (let d = 0; d < 7; d++) {
+      if (DATA.entries[d]) weekEntries.push({ day: d, ...DATA.entries[d] });
+    }
+    const isWeekComplete = weekEntries.length === 7;
+
+    let feedbackText = null;
+    try {
+      const resp = await fetch('/api/energy-journal/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: isWeekComplete, week_entries: weekEntries })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        feedbackText = result.encouragement;
+      }
+    } catch (e) {}
+    if (!feedbackText) feedbackText = getRandomFallback(action, thanksTarget);
+
+    DATA.entries[idx].ai_feedback = feedbackText;
+    saveData(DATA);
+    showFeedback(feedbackText);
+
+    // Check if week just completed
+    if (isWeekComplete && !DATA.week_review) {
+      try {
+        const resp = await fetch('/api/energy-journal/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
+        });
+        if (resp.ok) {
+          const result = await resp.json();
+          if (result.week_review) DATA.week_review = result.week_review;
+        }
+      } catch (e) {}
+      saveData(DATA);
+
+      DATA._pending_summary = {
+        week_start: DATA.current_week_start,
+        entries: { ...DATA.entries },
+        completed_days: 7
+      };
+      saveData(DATA);
+      setTimeout(() => showWeekReviewPopup(), 600);
+    }
+  }
+}
+
+async function saveTodayFromMonth(idx, weekIdx) {
+  const action = document.getElementById('input-action-month').value.trim();
+  const feeling = document.getElementById('input-feeling-month').value.trim();
+  const thanksTarget = document.getElementById('input-thanks-target-month').value;
+  const thanks = document.getElementById('input-thanks-month').value.trim();
+  const errEl = document.getElementById('save-error-month');
+
+  if (!action) { errEl.textContent = '请写下一件你今天做的事'; errEl.classList.remove('hidden'); return; }
+  if (!feeling) { errEl.textContent = '请写下你的感受'; errEl.classList.remove('hidden'); return; }
+  if (!thanks) { errEl.textContent = '请感谢你的身体'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const prev = DATA.entries[idx];
+  let editCount;
+  if (!prev) {
+    editCount = 1;
+  } else {
+    const hasChanged = prev.action !== action || prev.feeling !== feeling || prev.thanks_target !== thanksTarget || prev.thanks !== thanks;
+    editCount = hasChanged ? (prev.edit_count || 1) + 1 : (prev.edit_count || 1);
+  }
+
+  DATA.entries[idx] = { action, feeling, thanks_target: thanksTarget, thanks, saved_at: new Date().toISOString(), edit_count: editCount };
+  saveData(DATA);
+
+  EXPANDED_WEEK_IDX = weekIdx;
+  render();
+
+  if (editCount >= MAX_EDITS) {
+    setTimeout(() => showToast('✅ 今天的记录已锁定', 1500), 200);
+  } else {
+    const weekEntries = [];
+    for (let d = 0; d < 7; d++) {
+      if (DATA.entries[d]) weekEntries.push({ day: d, ...DATA.entries[d] });
+    }
+    const isWeekComplete = weekEntries.length === 7;
+
+    let feedbackText = null;
+    try {
+      const resp = await fetch('/api/energy-journal/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: isWeekComplete, week_entries: weekEntries })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        feedbackText = result.encouragement;
+      }
+    } catch (e) {}
+    if (!feedbackText) feedbackText = getRandomFallback(action, thanksTarget);
+
+    DATA.entries[idx].ai_feedback = feedbackText;
+    saveData(DATA);
+    showFeedback(feedbackText);
+
+    if (isWeekComplete && !DATA.week_review) {
+      try {
+        const resp = await fetch('/api/energy-journal/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, feeling, thanks_target: thanksTarget, thanks, day: idx + 1, is_week_complete: true, week_entries: weekEntries, request_review: true })
+        });
+        if (resp.ok) {
+          const result = await resp.json();
+          if (result.week_review) DATA.week_review = result.week_review;
+        }
+      } catch (e) {}
+      saveData(DATA);
+
+      DATA._pending_summary = {
+        week_start: DATA.current_week_start,
+        entries: { ...DATA.entries },
+        completed_days: 7
+      };
+      saveData(DATA);
+      setTimeout(() => showWeekReviewPopup(), 600);
+    }
+  }
+}
+
+function saveTodayEdit(idx) {
+  const action = document.getElementById('input-action-edit').value.trim();
+  const feeling = document.getElementById('input-feeling-edit').value.trim();
+  const thanksTarget = document.getElementById('input-thanks-edit-target').value;
+  const thanks = document.getElementById('input-thanks-edit').value.trim();
+  const errEl = document.getElementById('save-edit-error');
+
+  if (!action) { errEl.textContent = '请写下一件你今天做的事'; errEl.classList.remove('hidden'); return; }
+  if (!feeling) { errEl.textContent = '请写下你的感受'; errEl.classList.remove('hidden'); return; }
+  if (!thanks) { errEl.textContent = '请感谢你的身体'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const prev = DATA.entries[idx];
+  if (!prev) return;
+
+  const hasChanged = prev.action !== action || prev.feeling !== feeling || prev.thanks_target !== thanksTarget || prev.thanks !== thanks;
+  const newEditCount = hasChanged ? (prev.edit_count || 1) + 1 : (prev.edit_count || 1);
+
+  DATA.entries[idx] = {
+    action, feeling, thanks_target: thanksTarget, thanks,
+    saved_at: new Date().toISOString(),
+    edit_count: newEditCount,
+    ai_feedback: prev.ai_feedback || null
+  };
+  saveData(DATA);
+  render();
+
+  if (!hasChanged) {
+    setTimeout(() => showToast('内容没有变化，修改次数未计入'), 1000);
+  }
+}
+
+function toggleCompleted(idx) {
+  const el = document.getElementById(`expanded-${idx}`);
+  const chevron = document.getElementById(`chevron-${idx}`);
+  if (!el) return;
+  if (el.classList.contains('hidden')) {
+    el.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  } else {
+    el.classList.add('hidden');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+function toggleTodayCard() {
+  const el = document.getElementById('expanded-today');
+  const chevron = document.getElementById('chevron-today');
+  if (!el) return;
+  const isExpanded = !el.classList.contains('hidden');
+  if (isExpanded) {
+    el.classList.add('hidden');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+  } else {
+    el.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+}
+
+function toggleMonthWeek(idx) {
+  if (EXPANDED_WEEK_IDX === idx) {
+    EXPANDED_WEEK_IDX = null;
+  } else {
+    EXPANDED_WEEK_IDX = idx;
+  }
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI Feedback & Week Transition
+// ═══════════════════════════════════════════════════════════════
+
+function getRandomFallback(action, target) {
+  const pool = [
+    `你的${target}今天做了「${action.slice(0, 15)}...」，这就是行动。无论大小，它都算数。`,
+    `看见了。这件小事是你今天送给自己的礼物。`,
+    `${target}不会说话，但你的记录让它们被看见了。`,
+    `一件事、一份感受、一句感谢——你今天完成了和自己的对话。`,
+    `低谷的日子里，每一件小事都是一步。你今天又走了一步。`,
+    `谢谢你的记录。它很重要，你也一样。`,
+    `你的${target}今天没有白过。明天它还会继续帮你。`,
+    `感受没有大小，就像行动没有大小。你今天都在。`,
+    `一件事，一份觉察——今天的日记完整了。`,
+    `哪怕只是${action.slice(0, 6)}，你也改变了世界的一角。`
+  ];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function showFeedback(text) {
+  document.getElementById('feedback-text').textContent = text;
+  document.getElementById('popup-feedback').classList.remove('hidden');
+}
+
+function closeFeedback() {
+  document.getElementById('popup-feedback').classList.add('hidden');
+}
+
+function closeNewWeekPopup() {
+  document.getElementById('popup-new-week').classList.add('hidden');
+}
+
+function startNewWeek() {
+  document.getElementById('popup-new-week').classList.add('hidden');
+  delete DATA._pending_summary;
+  saveData(DATA);
+  render();
+  showToast('新的一周开始了！', 1500);
+}
+
+function showWeekReviewPopup() {
+  const summary = DATA._pending_summary;
+  if (!summary) return;
+  const entriesArr = Object.values(summary.entries).filter(e => e);
+  const actions = entriesArr.map(e => e.action).join('、');
+  const weekLabel = getWeekLabel(summary.week_start);
+  document.getElementById('review-summary').innerHTML = `
+    <p style="font-size:12px; color:#62596B; margin-bottom:6px;">📅 ${weekLabel}</p>
+    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-bottom:6px;">这一周你完成了 <span style="color:#C3A485; font-weight:600;">7 天</span> 的记录：</p>
+    <p style="font-size:12px; color:#62596B; line-height:1.5;">${escapeHtml(actions)}</p>
+    <p style="font-size:13px; color:#1C1324; line-height:1.6; margin-top:8px;">这7天，你用双手创造了属于自己的能量。每一次行动都在证明——你比自己想象的更有力量。新的一周，继续向前！</p>
+  `;
+  document.getElementById('popup-new-week').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════════════════════════════
+
+let _toastTimer = null;
+function showToast(text, duration) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  if (_toastTimer) clearTimeout(_toastTimer);
+  el.textContent = text;
+  el.style.opacity = '1';
+  _toastTimer = setTimeout(() => { el.style.opacity = '0'; }, duration || 1000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// History Views
+// ═══════════════════════════════════════════════════════════════
+
+function showHistory() {
+  preHistoryViewMode = VIEW_MODE;
+  document.getElementById('screen-week').classList.add('hidden');
+  document.getElementById('screen-month').classList.add('hidden');
+  document.getElementById('screen-history').classList.remove('hidden');
+  document.getElementById('screen-history-detail').classList.add('hidden');
+  renderHistoryList();
+}
+
+function showCurrentWeek() {
+  document.getElementById('screen-history').classList.add('hidden');
+  document.getElementById('screen-history-detail').classList.add('hidden');
+  if (preHistoryViewMode === 'month') {
+    document.getElementById('screen-month').classList.remove('hidden');
+  } else {
+    document.getElementById('screen-week').classList.remove('hidden');
+  }
+  VIEW_MODE = preHistoryViewMode;
+  render();
+}
+
+function renderHistoryList() {
+  const container = document.getElementById('history-list');
+  const emptyEl = document.getElementById('history-empty');
+  const weeks = DATA.archived_weeks;
+
+  if (!weeks || weeks.length === 0) {
+    container.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  container.innerHTML = weeks.map((w, idx) => {
+    const entriesArr = Object.values(w.entries).filter(e => e);
+    const actions = entriesArr.map(e => e.action).join('、').slice(0, 60);
+    return `
+    <div class="bg-premium-panel rounded-xl px-4 py-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="showWeekDetail(${idx})">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-premium-textMain">${getWeekLabel(w.week_start)}</p>
+          <p class="text-xs text-premium-textMuted mt-0.5">完成 ${w.completed_days} 天</p>
+        </div>
+        <i class="fa-solid fa-chevron-right text-premium-textMuted text-xs"></i>
+      </div>
+      <p class="text-xs text-premium-textMuted mt-1 truncate">${actions || '暂无记录'}</p>
+    </div>`;
+  }).join('');
+}
+
+function showWeekDetail(idx) {
+  const week = DATA.archived_weeks[idx];
+  if (!week) return;
+
+  document.getElementById('screen-history').classList.add('hidden');
+  document.getElementById('screen-week').classList.add('hidden');
+  document.getElementById('screen-month').classList.add('hidden');
+  document.getElementById('screen-history-detail').classList.remove('hidden');
+  document.getElementById('detail-title').textContent = getWeekLabel(week.week_start);
+
+  const container = document.getElementById('history-detail-cards');
+  let mondayStr = week.week_start;
+  if (!isValidDateStr(mondayStr)) mondayStr = getMondayStr();
+  let html = '';
+
+  if (week.week_review) {
+    html += `
+    <div class="bg-premium-accentLight rounded-xl px-4 py-3 mb-2">
+      <p class="text-xs text-premium-accent font-medium mb-1">💫 一周回顾</p>
+      <p class="text-sm text-premium-textMain leading-relaxed">${escapeHtml(week.week_review)}</p>
+    </div>`;
+  }
+
+  for (let i = 0; i < 7; i++) {
+    const entry = week.entries[i] || null;
+    const mondayDate = new Date(mondayStr + 'T00:00:00');
+    if (isNaN(mondayDate.getTime())) { html += '<div class="text-xs text-red-400">日期数据异常</div>'; break; }
+    mondayDate.setDate(mondayDate.getDate() + i);
+    const dateStr = `${safeDate(() => mondayDate.getMonth() + 1)}/${safeDate(() => mondayDate.getDate())} 周${WEEKDAY_CN[safeDate(() => mondayDate.getDay())] || '--'}`;
+
+    if (entry) {
+      html += `
+      <div class="bg-premium-panel rounded-xl px-4 py-3 mb-2">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-5 h-5 rounded-full bg-premium-accentLight flex items-center justify-center">
+            <i class="fa-solid fa-check text-premium-accent text-xs"></i>
+          </span>
+          <span class="text-sm font-medium text-premium-textMain">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <p class="text-sm text-premium-textMain ml-7">${escapeHtml(entry.action)}</p>
+        <p class="text-xs text-premium-textMuted ml-7 mt-0.5">${escapeHtml(entry.feeling)}</p>
+        <div class="ml-7 mt-2 pl-3 border-l-2 border-premium-accentLight">
+          <p class="text-xs text-premium-textMuted">感谢<span class="text-premium-accent font-medium">${escapeHtml(entry.thanks_target)}</span>：<span class="italic">"${escapeHtml(entry.thanks)}"</span></p>
+        </div>
+        ${entry.ai_feedback ? `
+        <div class="ml-7 mt-2 bg-premium-accentLight rounded-lg px-3 py-2">
+          <p class="text-xs text-premium-textMain">💫 ${escapeHtml(entry.ai_feedback)}</p>
+        </div>` : ''}
+      </div>`;
+    } else {
+      html += `
+      <div class="rounded-xl px-4 py-3 mb-2 border border-dashed border-premium-border opacity-60">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-premium-border flex items-center justify-center">
+            <i class="fa-solid fa-minus text-premium-textMuted text-xs"></i>
+          </span>
+          <span class="text-sm text-premium-textMuted">${DAY_LABELS[i]}</span>
+          <span class="text-xs text-premium-textMuted">${dateStr}</span>
+        </div>
+        <p class="text-xs text-premium-textMuted ml-7 mt-1">错过了，没关系</p>
+      </div>`;
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+function backToHistoryList() {
+  document.getElementById('screen-history-detail').classList.add('hidden');
+  document.getElementById('screen-history').classList.remove('hidden');
+  renderHistoryList();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// View Switch
+// ═══════════════════════════════════════════════════════════════
+
+function switchView(mode) {
+  VIEW_MODE = mode;
+  EXPANDED_WEEK_IDX = null;
+
+  document.getElementById('screen-history').classList.add('hidden');
+  document.getElementById('screen-history-detail').classList.add('hidden');
+
+  if (mode === 'week') {
+    document.getElementById('screen-week').classList.remove('hidden');
+    document.getElementById('screen-month').classList.add('hidden');
+    document.getElementById('tab-week').className = 'tab-active';
+    document.getElementById('tab-week').style.cssText = 'padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; color:#C3A485; border-bottom:2px solid #C3A485; transition:all 0.2s;';
+    document.getElementById('tab-month').style.cssText = 'padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; color:#62596B; transition:all 0.2s;';
+  } else {
+    document.getElementById('screen-month').classList.remove('hidden');
+    document.getElementById('screen-week').classList.add('hidden');
+    document.getElementById('tab-month').className = 'tab-active';
+    document.getElementById('tab-week').style.cssText = 'padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; color:#62596B; transition:all 0.2s;';
+    document.getElementById('tab-month').style.cssText = 'padding:6px 12px; font-size:13px; font-weight:500; background:none; border:none; cursor:pointer; color:#C3A485; border-bottom:2px solid #C3A485; transition:all 0.2s;';
+  }
+
+  render();
+}
+
+function render() {
+  if (VIEW_MODE === 'week') renderWeekView();
+  else renderMonthView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════════
+
+function init() {
+  if (!isValidDateStr(DATA.current_week_start)) {
+    DATA.current_week_start = getMondayStr();
+    saveData(DATA);
+  }
+  if (DATA.archived_weeks) {
+    DATA.archived_weeks = DATA.archived_weeks.filter(w => isValidDateStr(w.week_start));
+  }
+  render();
+}
+
+init();
+</script>
+
+</body>
+</html>
