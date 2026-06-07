@@ -379,7 +379,7 @@ function getWeekDateRange(weekStartStr) {
 }
 
 function getWeekLabel(weekStartStr) {
-  const start = new Date(weekStartStr);
+  const start = new Date(weekStartStr + 'T00:00:00');
   if (isNaN(start.getTime())) return '日期异常';
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
@@ -1068,12 +1068,10 @@ function closeNewWeekPopup() {
 function startNewWeek() {
   document.getElementById('popup-new-week').classList.add('hidden');
   const summary = DATA._pending_summary;
-  if (summary) {
-    DATA.archived_weeks.unshift(summary);
-  }
-  // Only advance to next week if the summary belongs to the current week
-  // (not when checkWeekIntegrity already advanced on Monday)
+  // Only archive & advance when user manually enters next week from current week.
+  // When checkWeekIntegrity already archived on Monday, just dismiss the popup.
   if (summary && summary.week_start === DATA.current_week_start) {
+    DATA.archived_weeks.unshift(summary);
     const nextMonday = new Date(DATA.current_week_start + 'T00:00:00');
     nextMonday.setDate(nextMonday.getDate() + 7);
     const y = nextMonday.getFullYear();
